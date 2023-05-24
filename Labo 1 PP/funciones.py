@@ -21,7 +21,9 @@ def menu() -> int:
     ║  7 ║ Guardar en formato JSON                           ║
     ║  8 ║ Leer desde formato JSON                           ║
     ║  9 ║ Actualizar precios                                ║
-    ║ 10 ║ Salir                                             ║
+    ║ 10 ║ Agregar nuevo producto                            ║
+    ║ 11 ║ Guardar datos actualizados en archivo             ║
+    ║ 12 ║ Salir                                             ║
     ╚════╩═══════════════════════════════════════════════════╝""")
     
     while True:
@@ -31,7 +33,7 @@ def menu() -> int:
             print("Solo pueden ingresarse opciones numericas entre 1-10")
             continue
         
-        if opcion > 0 and opcion <= 10:
+        if opcion > 0 and opcion <= 12:
             return opcion
         else:
             print(f"La opcion numero {opcion} no existe.")
@@ -335,3 +337,110 @@ def cargar_a_csv(catalogo: list, archivo: str) -> None:
         file.write("ID,NOMBRE,MARCA,PRECIO,CARACTERISTICAS\n")
         for insumo in catalogo:
             file.write(f"{insumo['ID']},{insumo['NOMBRE']},{insumo['MARCA']},{insumo['PRECIO']},{insumo['CARACTERISTICAS']}\n")
+
+def descargar_de_txt(archivo: str) -> list:
+    """Lee un archivo txt y guarda los datos en una lista
+
+    Args:
+        archivo (str): nombre del archivo que queremos leer
+
+    Returns:
+        list: lista con los datos del archivo txt
+    """    
+    with open(archivo, "r") as file:
+        lista_marcas = []
+        for linea in file:
+            linea = linea.strip("\n")
+            lista_marcas.append(linea)
+    return lista_marcas
+
+def mostrar_lista(lista: list, titulo: str) -> None:
+    """Muestra una lista con un titulo a eleccion
+
+    Args:
+        lista (list): lista que vamos a mostrar
+        titulo (str): encabezado de la lista
+    """    
+    print("|========================================|")
+    print(f"|{titulo:^40s}|")
+    print("|========================================|")
+    for elemento in lista:
+        print(f"|{elemento:^40s}|")
+        print("|----------------------------------------|")
+
+def agregar_producto(catalogo: list) -> None:
+    """Se le va pidiendo al usuario que complete los datos de un producto y se lo agrega al catalogo
+
+    Args:
+        catalogo (list): catalogo original donde se va a agregar un insumo
+    """    
+    producto = {}
+    producto['ID'] = str(int(catalogo[-1]['ID']) + 1)
+    producto['NOMBRE'] = input("Ingrese un nombre para el producto: ")
+    
+    lista_marcas = descargar_de_txt("Labo 1 PP\\marcas.txt")
+    mostrar_lista(lista_marcas,"MARCAS DISPONIBLES")
+    while True:
+        marca = input("A partir de estas, cual quiere que sea la marca para su producto: ")
+        if marca in lista_marcas:
+            producto['MARCA'] = marca
+            break
+        else:
+            print("La marca no es valida, debe estar en la lista.")
+    
+    while True: 
+        try:
+            precio = float(input("Ingrese el precio del producto: "))
+        except ValueError:
+            print("Debe ingresar un precio, tiene que ser numerico.")
+            continue
+        else:
+            break
+        
+    producto['PRECIO'] = f"${precio}"
+    
+    
+    contador = 0
+    flag_caracteristica = True
+    while True:
+        caracteristica = input("Ingrese caracteristica: ")
+        if caracteristica == "" and flag_caracteristica:
+            print("Debe ingresar una caracteristica obligatoriamente.")
+            continue
+        
+        if contador == 0:
+            producto['CARACTERISTICAS'] = caracteristica
+            flag_caracteristica = False
+        elif contador == 1:
+            producto['CARACTERISTICAS'] = producto["CARACTERISTICAS"]+"~"+caracteristica
+        elif contador == 2:
+            producto['CARACTERISTICAS'] = producto["CARACTERISTICAS"]+"~"+caracteristica
+            
+        contador += 1
+        seguir = input("Desea ingresar otra caracteristica?: ")
+        if seguir == "n" or contador == 3:
+            break
+        
+    catalogo.append(producto)
+
+def guardar_en_archivo(catalogo: list) -> None:
+    """Guarda a eleccion del usuario, en un archivo json o un archivo csv el catalogo que le pasamos por parametro, con un nombre elegido por el usuario
+
+    Args:
+        catalogo (list): lista de diccionarios 
+    """    
+    while True:
+        extension = input("En que tipo de archivo desea guardar el catalogo? (csv | json): ")
+        if extension == 'json' or extension == 'csv':
+            break
+    
+    nombre_archivo = input("Ingrese el nombre del archivo (sin la extension): ")
+    
+    if extension == "json":
+        with open(nombre_archivo+"."+extension, "w") as file:
+            json.dump(catalogo, file, indent=2)
+    else:
+        with open(nombre_archivo+"."+extension, "w", encoding= "UTF-8") as file:
+            file.write("ID,NOMBRE,MARCA,PRECIO,CARACTERISTICAS\n")
+            for insumo in catalogo:
+                file.write(f"{insumo['ID']},{insumo['NOMBRE']},{insumo['MARCA']},{insumo['PRECIO']},{insumo['CARACTERISTICAS']}\n")

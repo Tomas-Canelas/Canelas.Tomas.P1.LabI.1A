@@ -61,8 +61,18 @@ while True:
                 cargar_a_csv(catalogo_precios_nuevos, "Labo 1 PP\\insumos.csv")
                 flag_descarga_archivo_csv = False
             else:
-                print("Primero se debe cargar el archivo csv en la lista, ingrese a la opcion 1")   
-        case 10:                            #Salir
+                print("Primero se debe cargar el archivo csv en la lista, ingrese a la opcion 1")  
+        case 10:                            #Agregar producto
+            if flag_descarga_archivo_csv:
+                agregar_producto(catalogo)
+            else:
+                print("Primero se debe cargar el archivo csv en la lista, ingrese a la opcion 1")
+        case 11:                            #Guardar datos actualizados en archivo
+            if flag_descarga_archivo_csv:
+                guardar_en_archivo(catalogo)
+            else:
+                print("Primero se debe cargar el archivo csv en la lista, ingrese a la opcion 1")
+        case 12:                            #Salir
             salir = input("Confirma la salida? s/n: ")
             if salir == "s":
                 break
