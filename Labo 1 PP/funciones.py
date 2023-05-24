@@ -1,4 +1,6 @@
 import re
+import json
+from functools import reduce
 
 def menu() -> int:
     """Imprime el menu y pide una opcion 
@@ -34,7 +36,7 @@ def menu() -> int:
         else:
             print(f"La opcion numero {opcion} no existe.")
 
-def cargar_datos_csv(lista: list, archivo: str) -> None:
+def descargar_de_csv(lista: list, archivo: str) -> None:
     """Carga los datos de un archivo csv a una lista de diccionarios
 
     Args:
@@ -133,14 +135,14 @@ def listar_catalogo_por(catalogo: list, clave: str, lista_tipo: list) -> None:
     """    
     for item in lista_tipo:
         print(f"{item:^165s}")
-        print("╔════╦══════════════════════════════╦═════════════════════════╦══════════╦══════════════════════════════════════════════════════════════════════════════════════════╗")
-        print("║ ID ║            NOMBRE            ║          MARCA          ║  PRECIO  ║                                     CARACTERISTICAS                                      ║")
-        print("║════║══════════════════════════════║═════════════════════════║══════════║══════════════════════════════════════════════════════════════════════════════════════════║")
+        print("╔════╦═══════════════════════════════════╦═════════════════════════╦══════════╦══════════════════════════════════════════════════════════════════════════════════════════╗")
+        print("║ ID ║               NOMBRE              ║          MARCA          ║  PRECIO  ║                                     CARACTERISTICAS                                      ║")
+        print("║════║═══════════════════════════════════║═════════════════════════║══════════║══════════════════════════════════════════════════════════════════════════════════════════║")
 
         for insumo in catalogo:
             if insumo[clave] == item:
                 mostrar_insumo(insumo)
-        print("╚════╩══════════════════════════════╩═════════════════════════╩══════════╩══════════════════════════════════════════════════════════════════════════════════════════╝\n")
+        print("╚════╩═══════════════════════════════════╩═════════════════════════╩══════════╩══════════════════════════════════════════════════════════════════════════════════════════╝\n")
 
 def buscar_por_caracteristica(catalogo: list) -> list:
     """Muestra el catalogo original y permite al usuario ingresar 
@@ -200,3 +202,136 @@ def ordenar_catalogo_criterio_y_precio(catalogo: list, criterio_uno: str, precio
                 aux = catalogo[i]
                 catalogo[i] = catalogo[j]
                 catalogo[j] = aux
+
+def filtar_por_marca(catalogo: list) -> list:
+    """Pide por cosola que se ingrese una marca y luego filtra una lista con los productos de esa marca
+
+    Args:
+        catalogo (list): catalogo en el cual se van a buscar los productos de esa marca
+
+    Returns:
+        list: devuelve una lista con todos los productos de la marca ingresada
+    """    
+    mostrar_catalogo(catalogo)
+    marca = input("\nIngrese la marca de la cual desea ver que productos hay disponibles: ")
+    insumos_marca_elegida = list(filter(lambda insumo: insumo["MARCA"] == marca, catalogo))
+    return insumos_marca_elegida
+
+def realizar_compras(catalogo: list) -> float:
+    """Permite al usuario realizar compras hasta que lo desee, carga en un archivo txt la factura
+
+    Args:
+        catalogo (list): catalogo del cual se van a realizar las compras
+
+    Returns:
+        float: precio final total de la compra
+    """    
+    with open("Labo 1 PP\\factura.txt", "w") as file:
+        file.write("| Cantidad |                    Descripcion                   |     Precio     |          Subtotal         |\n")
+    
+    subtotales = []
+    while True:
+        insumos_marca_elegida = filtar_por_marca(catalogo)
+        mostrar_catalogo(insumos_marca_elegida)
+        
+        #Validaciones
+        while True:
+            try:
+                id = int(input("Ingrese el id del producto que desea: "))
+            except ValueError:
+                print("Solo se pueden ingresar id entre 1-50")
+                continue
+            break
+        
+        while True:
+            try:
+                cantidad = int(input("Ingrese la cantidad que desea: "))
+            except ValueError:
+                print("Solo se pueden ingresar numeros")
+                continue
+            break
+        
+        for insumo in catalogo:
+            if id == int(insumo["ID"]):
+                producto = {}
+                producto["INSUMO"] = insumo["NOMBRE"]
+                producto["MARCA"] = insumo["MARCA"]
+                producto["PRECIO"] = re.sub("\\$", "", insumo["PRECIO"])
+                producto["CANTIDAD"] = cantidad
+                subtotales.append(producto['CANTIDAD'] * float(producto['PRECIO']))
+                
+                with open("Labo 1 PP\\factura.txt", "a") as file:
+                    file.write("|----------|--------------------------------------------------|----------------|---------------------------|\n")
+                    file.write(f"|{str(producto['CANTIDAD']):^10s}| {producto['INSUMO']:29s}{producto['MARCA']:20s}|{producto['PRECIO']:^16s}|{str(subtotales[-1]):^27s}|\n")
+        
+        seguir = input("Desea seguir comprando? s/n: ")
+        if seguir == "n":
+            break
+    
+    # Para validar que subtotales no este vacia
+    try:
+        total = reduce(lambda ant, act: ant + act, subtotales)
+    except UnboundLocalError:
+        total = 0
+    
+    with open("Labo 1 PP\\factura.txt", "a") as file:
+        file.write(f"\nEl total de la compra es de: ${total}")
+    return total
+
+def catalogo_solo_alimentos(catalogo: list) -> list:
+    """Filtra el catalogo original y devuelve uno solo de los productos que contengan la palabra 'Alimento' en el nombre
+
+    Args:
+        catalogo (list): catalogo original
+
+    Returns:
+        list: catalogo solo de alimentos
+    """    
+    patron = re.compile("Alimento")
+    return list(filter(lambda insumo: patron.search(insumo["NOMBRE"]), catalogo))
+
+def cargar_a_json(lista_dicts: list, archivo: str) -> None:
+    """Crea y escribe un archivo json con una lista de diccionarios que le pasamos
+
+    Args:
+        lista_dicts (list): lista de diccionarios que queremos cargar como archivo json
+        archivo (str): nombre que recibira el archivo json
+    """    
+    with open(archivo, "w") as file:
+        json.dump(lista_dicts, file, indent=2)
+
+def descargar_de_json(archivo: str) -> list:
+    """Lee un archivo json y lo pasa a una lista de diccionarios
+
+    Args:
+        archivo (str): nombre del archivo que queremos leer
+
+    Returns:
+        list: lista de diccionarios cargada con el archivo
+    """    
+    with open(archivo, "r") as file:
+        return json.load(file)
+
+def aumento_precios(catalogo: list) -> list:
+    """Recibe por parametros el catalogo original y mediante la funcion map aumenta un 8,4% los precios y devuelve una lista con los precios nuevos
+
+    Args:
+        catalogo (list): lista de diccionarios con alguno de sus campos "PRECIO"
+
+    Returns:
+        (list): catalogo con los nuevos precios aumentados
+    """    
+    return list(map(lambda insumo: {**insumo, "PRECIO": float(re.sub("\\$", "", insumo["PRECIO"])) * 1.084}, catalogo))
+    # list(map(lambda insumo: float(re.sub("\\$", "", insumo["PRECIO"])) * 1.084, catalogo))   <- esto devolvia una lista con los precios aumentados
+
+def cargar_a_csv(catalogo: list, archivo: str) -> None:
+    """Carga el catalogo a un archivo csv
+
+    Args:
+        catalogo (list): lista de diccionarios 
+        archivo (str): nombre del archivo csv donde lo vamos a cargar
+    """    
+    with open(archivo, "w", encoding= "UTF-8") as file:
+        file.write("ID,NOMBRE,MARCA,PRECIO,CARACTERISTICAS\n")
+        for insumo in catalogo:
+            file.write(f"{insumo['ID']},{insumo['NOMBRE']},{insumo['MARCA']},{insumo['PRECIO']},{insumo['CARACTERISTICAS']}\n")
